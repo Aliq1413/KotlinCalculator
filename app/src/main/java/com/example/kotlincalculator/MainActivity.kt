@@ -3,90 +3,144 @@ package com.example.kotlincalculator
 import android.content.res.Configuration
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import androidx.lifecycle.ViewModelProvider
+import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var display: TextView
-    private lateinit var zero: Button
-    private lateinit var one: Button
-    private lateinit var two: Button
-    private lateinit var three: Button
-    private lateinit var four: Button
-    private lateinit var five: Button
-    private lateinit var six: Button
-    private lateinit var seven: Button
-    private lateinit var eight: Button
-    private lateinit var nine: Button
-    private lateinit var plusMinus: Button
-    private lateinit var decimal: Button
-    private lateinit var multiply: Button
-    private lateinit var divide: Button
-    private lateinit var add: Button
-    private lateinit var subtract: Button
-    private lateinit var clear: Button
-    private lateinit var result: Button
-    private lateinit var del: Button
-
+    private  var canAddOperation = false
+    private  var canAddDecimal = true
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val viewModel = ViewModelProvider(this).get( CalculatorViewModel::class.java)
+    }
+    fun allClearAction(view: View) {
+        workingTV.text = ""
+        resultsTV.text = ""
+    }
+    fun backSpaceAction(view: View) {
+        val length = workingTV.length()
+        if(length > 0)
+            workingTV.text = workingTV.text.subSequence(0,length -1)
+    }
+    fun equalsAction(view: View) {
 
-        display = findViewById(R.id.tvDisplay)
+        resultsTV.text = calculateResults()
+    }
+    private  fun calculateResults(): String {
+        val  digitsOperators = digitsOperators()
+        if (digitsOperators.isEmpty()) return ""
+        val timesDivision = timesDivisionCalculate(digitsOperators)
+        if (timesDivision.isEmpty()) return ""
+        val  result = addSubtractCalculate(timesDivision)
+        return result.toString()
 
-        display.text = viewModel.displayText
-
-        zero = findViewById(R.id.bt0)
-        zero.setOnClickListener { viewModel.setNum('0'); display.text = viewModel.displayText }
-        one = findViewById(R.id.bt1)
-        one.setOnClickListener { viewModel.setNum('1'); display.text = viewModel.displayText }
-        two = findViewById(R.id.bt2)
-        two.setOnClickListener { viewModel.setNum('2'); display.text = viewModel.displayText }
-        three = findViewById(R.id.bt3)
-        three.setOnClickListener { viewModel.setNum('3'); display.text = viewModel.displayText }
-        four = findViewById(R.id.bt4)
-        four.setOnClickListener { viewModel.setNum('4'); display.text = viewModel.displayText }
-        five = findViewById(R.id.bt5)
-        five.setOnClickListener { viewModel.setNum('5'); display.text = viewModel.displayText }
-        six = findViewById(R.id.bt6)
-        six.setOnClickListener { viewModel.setNum('6'); display.text = viewModel.displayText }
-        seven = findViewById(R.id.bt7)
-        seven.setOnClickListener { viewModel.setNum('7'); display.text = viewModel.displayText }
-        eight = findViewById(R.id.bt8)
-        eight.setOnClickListener { viewModel.setNum('8'); display.text = viewModel.displayText }
-        nine = findViewById(R.id.bt9)
-        nine.setOnClickListener { viewModel.setNum('9'); display.text = viewModel.displayText }
-        add = findViewById(R.id.btPlus)
-        add.setOnClickListener { viewModel.handleOperator('+'); display.text = viewModel.displayText }
-        subtract = findViewById(R.id.btMinus)
-        subtract.setOnClickListener { viewModel.handleOperator('-'); display.text = viewModel.displayText }
-        multiply = findViewById(R.id.btMultiply)
-        multiply.setOnClickListener { viewModel.handleOperator('*'); display.text = viewModel.displayText }
-        divide = findViewById(R.id.btDiv)
-        divide.setOnClickListener { viewModel.handleOperator('/'); display.text = viewModel.displayText }
-        decimal = findViewById(R.id.btDecimal)
-        decimal.setOnClickListener { viewModel.onClickDecimal(); display.text = viewModel.displayText }
-        plusMinus = findViewById(R.id.btNegative)
-        plusMinus.setOnClickListener { viewModel.onClickPlusMinus(); display.text = viewModel.displayText }
-        clear = findViewById(R.id.btClear)
-        clear.setOnClickListener { viewModel.clearAll(); display.text = viewModel.displayText }
-        result = findViewById(R.id.btEquals)
-        result.setOnClickListener { viewModel.calculate(); display.text = viewModel.displayText }
-        del = findViewById(R.id.btDel)
-        del.setOnClickListener { viewModel.deleteLast(); display.text = viewModel.displayText }
     }
 
-    override fun onConfigurationChanged(newConfig: Configuration) {
-        super.onConfigurationChanged(newConfig)
-        if (newConfig.orientation === Configuration.ORIENTATION_LANDSCAPE) {
-            display.setPadding(0,0,24,0)
-            display.textSize = 24f
-        } else if (newConfig.orientation === Configuration.ORIENTATION_PORTRAIT) {
-            display.setPadding(0,24,24,0)
-            display.textSize = 32f
+    private fun addSubtractCalculate(passedList: MutableList<Any>): Float {
+    var result = passedList[0] as Float
+        for (i in passedList.indices)
+        {
+            if (passedList[i] is Char && i != passedList.lastIndex)
+            {
+                var operator = passedList[i]
+                var nextDigit = passedList[i + 1] as Float
+                if (operator == '+')
+                    result += nextDigit
+                if (operator == '-')
+                    result -= nextDigit
+            }
+
+        }
+        return  result
+    }
+
+    private fun timesDivisionCalculate(passedList: MutableList<Any>): MutableList<Any>
+    {
+          var  list = passedList
+        while (list.contains('x') || list.contains('/'))
+        {
+          list = calcTimesDiv(list)
+        }
+        return list
+    }
+
+    private fun calcTimesDiv(passedList: MutableList<Any>): MutableList<Any>
+    {
+       val  newList = mutableListOf<Any>()
+        var  restartIndex = passedList.size
+        for (i in passedList.indices)
+        {
+            if (passedList[i] is Char && i != passedList.lastIndex && i < restartIndex)
+            {
+            val operator = passedList[i]
+            val preDigit = passedList[i - 1] as Float
+            val nextDigit = passedList[i + 1] as Float
+            when(operator)
+            {
+          'x' ->
+          {
+              newList.add(preDigit * nextDigit)
+              restartIndex = i + 1
+
+          }
+                '/' ->
+                {
+                    newList.add(preDigit / nextDigit)
+                    restartIndex = i + 1
+
+                }
+                else -> {
+                    newList.add(preDigit)
+                    newList.add(operator)
+                }
+            }
+            }
+            if (i > restartIndex)
+                newList.add(passedList[i])
+        }
+        return  newList
+    }
+
+    private  fun  digitsOperators(): MutableList<Any>{
+        val list = mutableListOf<Any>()
+        var currentDigit = ""
+        for (character in  workingTV.text){
+            if (character.isDigit() || character == '.')
+                currentDigit += character
+            else{
+                list.add(currentDigit.toFloat())
+                currentDigit = ""
+                list.add(character)
+            }
+        }
+        if (currentDigit != "")
+         list.add(currentDigit.toFloat())
+
+        return list
+    }
+    fun numberAction(view: View) {
+        if (view is Button)
+        {
+            if (view.text == ".") {
+                if (canAddDecimal)
+               workingTV.append(view.text)
+              canAddDecimal = false
+            }
+            else
+            workingTV.append(view.text)
+            canAddOperation = true
+        }
+    }
+    fun OperatorAction(view: View) {
+        if (view is Button && canAddOperation)
+        {
+            workingTV.append(view.text)
+            canAddOperation = false
+            canAddDecimal = true
         }
     }
 }
